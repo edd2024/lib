@@ -2,48 +2,33 @@ name: Build & Deploy Library
 
 on:
   push:
-<<<<<<< HEAD
-    branches: [ main ]
-=======
     branches:
       - main
->>>>>>> 3af09dfe8ad140838f44df1b0766c67f9afd32ee
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
-<<<<<<< HEAD
-=======
 
->>>>>>> 3af09dfe8ad140838f44df1b0766c67f9afd32ee
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-<<<<<<< HEAD
       - name: Setup Node.js
-=======
-      - name: Set up Node.js
->>>>>>> 3af09dfe8ad140838f44df1b0766c67f9afd32ee
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: '18'
 
       - name: Install dependencies
         run: npm install
 
-<<<<<<< HEAD
-      - name: Build
-=======
-      - name: Build project
->>>>>>> 3af09dfe8ad140838f44df1b0766c67f9afd32ee
+      - name: Build library
         run: npm run build
 
-      - name: Deploy to Bluehost via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.LIB_FTP_SERVER }}
           username: ${{ secrets.LIB_FTP_USERNAME }}
           password: ${{ secrets.LIB_FTP_PASSWORD }}
-          local-dir: dist/
-          server-dir: /public_html/lib/
+          local-dir: dist
+          server-dir: public_html/lib
