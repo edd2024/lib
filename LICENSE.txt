@@ -1,3 +1,26 @@
 Elevate Digital Designs – Custom Library License (EULA)
 
 Copyright (c) {{YEAR}} Elevate Digital Designs. All rights reserved.
+<<<<<<< HEAD
+=======
+
+1. Usage Rights
+   - You are permitted to use this library ("lib") for personal, educational, and internal development purposes.
+   - You are NOT permitted to use this library in any commercial product, project, or service (including but not limited to website themes, templates, or SaaS offerings) without a valid commercial license from Elevate Digital Designs.
+
+2. Modifications
+   - You may modify this library for your own internal use.
+   - Modified versions are still bound by the restrictions above.
+
+3. Distribution
+   - Redistribution of this library, in whole or in part, is prohibited without written permission from Elevate Digital Designs.
+
+4. Commercial Licensing
+   - To use this library in commercial projects (e.g., paid themes, client websites, or distributed products), you must obtain a separate commercial license.
+   - Commercial licenses can be requested from: [your business email or website].
+
+5. No Warranty
+   - This library is provided "AS IS," without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement.
+
+By using this library, you agree to these terms.
+>>>>>>> 3af09dfe8ad140838f44df1b0766c67f9afd32ee
