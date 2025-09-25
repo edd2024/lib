@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
@@ -21,14 +21,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Update License + Build
+      - name: Build project
         run: npm run build
 
       - name: Deploy to Bluehost via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          server: ${{ secrets.LIB_FTP_SERVER }}
+          username: ${{ secrets.LIB_FTP_USERNAME }}
+          password: ${{ secrets.LIB_FTP_PASSWORD }}
           local-dir: dist/
           server-dir: /public_html/lib/
