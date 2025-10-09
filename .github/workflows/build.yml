@@ -17,28 +17,33 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js 22
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Install dependencies
-        run: |
-          echo "Installing dependencies..."
-          npm install
+        run: npm ci
 
-      - name: Run build script
+      - name: Debug workspace
         run: |
-          echo "Building project..."
-          npm run build || { echo "❌ Build failed"; exit 1; }
+          echo "========= PROJECT FILES ========="
+          ls -R
+          echo "================================="
 
-      - name: Verify dist files exist
+      - name: Run Rollup build
         run: |
-          if [ ! -f dist/lib.min.js ] || [ ! -f dist/lib.min.css ]; then
-            echo "❌ Missing built files in dist/"
+          echo "Starting Rollup build..."
+          npm run build || { echo "❌ Rollup build failed. Printing files..."; ls -R; exit 1; }
+
+      - name: Verify dist output
+        run: |
+          if [ -f dist/lib.min.js ] && [ -f dist/lib.min.css ]; then
+            echo "✅ Dist files verified."
+          else
+            echo "❌ dist output missing"
             exit 1
           fi
-          echo "✅ Dist files confirmed"
 
       - name: Commit and push built dist files
         run: |
