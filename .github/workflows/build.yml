@@ -21,6 +21,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,17 +32,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          # cache disabled to avoid path issues; enable later if you want
-          # cache: npm
-          # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build JS + CSS
+      - name: Build project
         run: npm run build
 
-      - name: Check for dist changes
+      - name: Detect changes in dist
         id: changes
         run: |
           if git status --porcelain dist | grep .; then
@@ -50,7 +48,7 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit and push built dist files
+      - name: Commit and push dist updates
         if: steps.changes.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
