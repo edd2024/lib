@@ -9,7 +9,7 @@ on:
       - "lib/rollup.config.js"
       - "lib/package.json"
       - "lib/package-lock.json"
-      - "lib/.github/workflows/build.yml"
+      - ".github/workflows/build.yml"
 
 permissions:
   contents: write
