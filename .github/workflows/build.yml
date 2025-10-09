@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "lib/src/**"
-      - "lib/scripts/**"
-      - "lib/rollup.config.js"
-      - "lib/package.json"
-      - "lib/package-lock.json"
+      - "src/**"
+      - "scripts/**"
+      - "rollup.config.js"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/build.yml"
 
 permissions:
@@ -21,7 +21,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,18 +31,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          # cache disabled to avoid path issues; enable later if you want
+          # cache: npm
+          # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: lib
         run: npm ci
 
       - name: Build JS + CSS
-        working-directory: lib
         run: npm run build
 
       - name: Check for dist changes
         id: changes
-        working-directory: lib
         run: |
           if git status --porcelain dist | grep .; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -53,7 +52,6 @@ jobs:
 
       - name: Commit and push built dist files
         if: steps.changes.outputs.changed == 'true'
-        working-directory: lib
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
