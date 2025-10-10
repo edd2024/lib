@@ -23,29 +23,40 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          echo "Installing dependencies..."
+          npm ci || { echo "❌ npm install failed"; exit 1; }
 
       - name: Debug workspace
         run: |
-          echo "========= PROJECT FILES ========="
+          echo "========= PROJECT STRUCTURE ========="
+          pwd
           ls -R
-          echo "================================="
+          echo "====================================="
 
-      - name: Run Rollup build
+      - name: Run Rollup build (verbose)
         run: |
-          echo "Starting Rollup build..."
-          npm run build || { echo "❌ Rollup build failed. Printing files..."; ls -R; exit 1; }
+          echo "========= STARTING ROLLUP ========="
+          npm run build --if-present --verbose || {
+            echo "❌ Rollup failed! Printing dist and logs...";
+            echo "--- dist ---"; ls -R dist || true;
+            echo "--- src ---"; ls -R src || true;
+            echo "--- scripts ---"; ls -R scripts || true;
+            echo "--- rollup.config.js ---"; cat rollup.config.js || true;
+            exit 1;
+          }
+          echo "========= ROLLUP COMPLETED ========="
 
       - name: Verify dist output
         run: |
           if [ -f dist/lib.min.js ] && [ -f dist/lib.min.css ]; then
-            echo "✅ Dist files verified."
+            echo "✅ dist verified"
           else
-            echo "❌ dist output missing"
+            echo "❌ dist missing output files"
             exit 1
           fi
 
-      - name: Commit and push built dist files
+      - name: Commit and push dist files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
