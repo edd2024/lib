@@ -1,16 +1,16 @@
 {
   "name": "lib",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
-    "prebuild": "node scripts/update-license.js",
-    "build": "rollup -c",
-    "dev": "rollup -c -w"
+    "prebuild": "node scripts/build-modules.js",
+    "build": "rollup -c"
   },
   "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "autoprefixer": "^10.4.21",
+    "cssnano": "^5.1.15",
     "rollup": "^3.0.0",
-    "rollup-plugin-terser": "^7.0.2",
-    "rollup-plugin-postcss": "^4.0.2",
-    "autoprefixer": "^10.0.0",
-    "cssnano": "^5.0.0"
+    "rollup-plugin-postcss": "^4.0.2"
   }
 }

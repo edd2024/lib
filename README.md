@@ -1,5 +1,4 @@
 # lib
-<<<<<<< HEAD
 A modular front-end component library (JS + CSS) by Elevate Digital Designs.
 
 ## Use from your domain
@@ -41,4 +40,4 @@ npm run build
 
 ## License
 See [LICENSE.txt](LICENSE.txt).
->>>>>>> 3af09dfe8ad140838f44df1b0766c67f9afd32ee
+3af09dfe8ad140838f44df1b0766c67f9afd32ee

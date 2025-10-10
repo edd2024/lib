@@ -1,8 +1,6 @@
 Elevate Digital Designs – Custom Library License (EULA)
 
-Copyright (c) {{YEAR}} Elevate Digital Designs. All rights reserved.
-<<<<<<< HEAD
-=======
+Copyright (c) 2025 Elevate Digital Designs. All rights reserved.
 
 1. Usage Rights
    - You are permitted to use this library ("lib") for personal, educational, and internal development purposes.
@@ -23,4 +21,4 @@ Copyright (c) {{YEAR}} Elevate Digital Designs. All rights reserved.
    - This library is provided "AS IS," without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement.
 
 By using this library, you agree to these terms.
->>>>>>> 3af09dfe8ad140838f44df1b0766c67f9afd32ee
+3af09dfe8ad140838f44df1b0766c67f9afd32ee
