@@ -1,0 +1,495 @@
+document.addEventListener("DOMContentLoaded", () => {
+  // ============================================================
+  // 🔧 CENTRAL CONFIG — defaults
+  const sliderConfig = {
+    loopSpeed: 600,
+    breakpoints: [
+      { max: 766,  items: 1, orientation: "vertical",   peek: 24 },
+      { max: 1022, items: 2, orientation: "horizontal", peek: 40 },
+      { max: 1399, items: 3, orientation: "horizontal", peek: 40 },
+      { max: Infinity, items: 3, orientation: "horizontal", peek: 40 }
+    ]
+  };
+  // ============================================================
+
+  const sliders          = document.querySelectorAll(".progress-nav");
+  const counts           = document.querySelectorAll(".progress-count");
+  const carousels        = document.querySelectorAll(".carousel");
+  const basicIndicators  = document.querySelectorAll(".indicator:not(.progress-indicator):not(.pill-indicator):not(.window-indicator)");
+  const progressIndicators = document.querySelectorAll(".progress-indicator");
+  const pillIndicators   = document.querySelectorAll(".pill-indicator");
+  const windowIndicators = document.querySelectorAll(".window-indicator");
+
+  sliders.forEach((nav, index) => {
+    const wrapper     = nav.querySelector(".progress-bar-wrapper");
+    const progressBar = wrapper?.querySelector(".progress-bar");
+    const bar         = progressBar?.querySelector(".progress");
+    const prevBtn     = nav.querySelector(".carousel-btn.prev");
+    const nextBtn     = nav.querySelector(".carousel-btn.next");
+
+    const countWrap           = counts[index];
+    const currentDisplay      = countWrap?.querySelector(".current");
+    const totalDisplay        = countWrap?.querySelector(".total");
+
+    const mask                = carousels[index];
+    const basicIndicatorWrap  = basicIndicators[index];
+    const progressIndicatorWrap = progressIndicators[index];
+    const pillIndicatorWrap   = pillIndicators[index];
+    const windowIndicatorWrap = windowIndicators[index];
+
+    if (!mask) return;
+
+    const isProgress = mask.classList.contains("progress-carousel");
+
+    let track = null;
+
+    // ----- State -----
+    let loopSpeed    = sliderConfig.loopSpeed;
+    let orientation  = "horizontal";
+    let itemsPerView = 3;
+    let peekSize     = 0;
+    let centers      = [];
+    let circles      = [];
+    let isAnimating  = false;
+
+    let sections       = [];
+    let totalSections  = 0;
+    let currentSection = 1;
+    let visualIndex    = 1;
+    let firstClone     = null;
+    let lastClone      = null;
+
+    let sourceSections = [];
+    let useItems = false;
+
+    // ----- Config helpers -----
+    function initLoopSpeed() {
+      const v = parseInt(nav?.dataset?.speed ?? "", 10);
+      if (!Number.isNaN(v)) loopSpeed = v;
+    }
+
+    function resolveBreakpoint() {
+      const bpAttr = nav.getAttribute("data-breakpoints");
+      let breakpoints = sliderConfig.breakpoints;
+      if (bpAttr) {
+        try { breakpoints = JSON.parse(bpAttr); }
+        catch (e) { console.warn("Invalid data-breakpoints", e); }
+      }
+
+      const w = window.innerWidth;
+      const bp = breakpoints.find(b => w <= b.max) || breakpoints[breakpoints.length - 1];
+      orientation  = bp.orientation;
+      itemsPerView = bp.items;
+      peekSize     = bp.peek || 0;
+    }
+
+    function getWindowVisibleCount() {
+      const attr = nav.getAttribute("data-window-visible");
+      if (attr && !Number.isNaN(parseInt(attr, 10))) {
+        return Math.max(1, parseInt(attr, 10));
+      }
+
+      const bpAttr = nav.getAttribute("data-window-visible");
+      if (bpAttr && bpAttr.trim().startsWith("[")) {
+        try {
+          const arr = JSON.parse(bpAttr);
+          const w = window.innerWidth;
+          const match = arr.find(b => w <= b.max) || arr[arr.length - 1];
+          if (match && match.dots) return Math.max(1, parseInt(match.dots, 10));
+        } catch (e) {
+          console.warn("Invalid data-window-visible JSON", e);
+        }
+      }
+
+      const windowDotsConfig = [
+        { max: 766,  dots: 5 },
+        { max: 1022, dots: 7 },
+        { max: 1399, dots: 7 },
+        { max: Infinity, dots: 9 }
+      ];
+      const w = window.innerWidth;
+      const bp = windowDotsConfig.find(b => w <= b.max) || windowDotsConfig[windowDotsConfig.length - 1];
+      return bp.dots;
+    }
+
+    // ----- Track + Sections -----
+    function ensureTrack() {
+      track = mask.querySelector(".progress-track");
+      if (!track) {
+        track = document.createElement("div");
+        track.className = "progress-track";
+        const selector = isProgress ? ".progress-section" : ".slide";
+        const existing = Array.from(mask.querySelectorAll(selector));
+        existing.forEach(n => track.appendChild(n));
+        mask.appendChild(track);
+      }
+      track.style.display = "flex";
+      track.style.flexWrap = "nowrap";
+      track.style.willChange = "transform";
+      track.style.width = "100%";
+    }
+
+    function readSources() {
+      const selector = isProgress ? ".progress-section" : ".slide";
+      sourceSections = Array.from(track.querySelectorAll(selector))
+        .filter(sec => !sec.classList.contains("clone") && !sec.classList.contains("generated"));
+      useItems = sourceSections.some(sec => sec.querySelector(".item"));
+    }
+
+    function clearGenerated() {
+      track.querySelectorAll(".progress-section.generated, .progress-section.clone, .slide.generated, .slide.clone")
+        .forEach(c => c.remove());
+    }
+
+    function buildSections() {
+      sections = [];
+      if (useItems) {
+        const allItems = [];
+        sourceSections.forEach(sec => {
+          sec.querySelectorAll(".item").forEach(item => allItems.push(item.cloneNode(true)));
+          sec.style.display = "none";
+        });
+
+        const containerWidth = mask.getBoundingClientRect().width;
+
+        for (let i = 0; i < allItems.length; i += itemsPerView) {
+          const page = document.createElement("div");
+          page.className = isProgress ? "progress-section generated" : "slide generated";
+
+          const group = allItems.slice(i, i + itemsPerView);
+          group.forEach(node => page.appendChild(node));
+
+          const isLast = (i + itemsPerView) >= allItems.length;
+          const width  = isLast ? containerWidth : (containerWidth - peekSize);
+
+          page.style.flex = `0 0 ${width}px`;
+
+          track.appendChild(page);
+          sections.push(page);
+        }
+      } else {
+        sourceSections.forEach(sec => sec.style.display = "");
+        sections = [...sourceSections];
+      }
+
+      totalSections = sections.length;
+      if (totalDisplay) totalDisplay.textContent = totalSections;
+    }
+
+    function buildClones() {
+      if (!sections.length) return;
+
+      firstClone = sections[0].cloneNode(true);
+      firstClone.classList.add("clone");
+      firstClone.style.flex = `0 0 ${mask.getBoundingClientRect().width - peekSize}px`;
+
+      lastClone = sections[sections.length - 1].cloneNode(true);
+      lastClone.classList.add("clone");
+      lastClone.style.flex = `0 0 ${mask.getBoundingClientRect().width - peekSize}px`;
+
+      track.insertBefore(lastClone, track.firstChild);
+      track.appendChild(firstClone);
+    }
+
+    // ----- Progress Indicator (step + circle + label) -----
+    function buildProgressSteps() {
+      if (!isProgress || !progressIndicatorWrap) return;
+      progressIndicatorWrap.innerHTML = "";
+      circles = [];
+      sections.forEach((sec, i) => {
+        const step = document.createElement("button");
+        step.className = "step";
+
+        const circle = document.createElement("div");
+        circle.className = "dot";
+        circle.textContent = i + 1;
+
+        const label = document.createElement("span");
+        label.className = "label";
+        label.textContent = sec.dataset.label || `Step ${i + 1}`;
+
+        step.appendChild(circle);
+        step.appendChild(label);
+        progressIndicatorWrap.appendChild(step);
+        circles.push(circle);
+
+        step.addEventListener("click", () => goToSection(i + 1));
+      });
+    }
+
+    function measureCenters() {
+      if (!isProgress || !wrapper || !progressBar) return;
+      const wrapRect = wrapper.getBoundingClientRect();
+      centers = circles.map(c => {
+        const r = c.getBoundingClientRect();
+        return { x: (r.left + r.width / 2) - wrapRect.left,
+                 y: (r.top  + r.height/ 2) - wrapRect.top };
+      });
+
+      if (!circles.length) return;
+      const first = centers[0];
+      const last  = centers[centers.length - 1];
+      if (orientation === "horizontal") {
+        const trackH = progressBar.offsetHeight || 8;
+        const y = first.y - trackH / 2;
+        progressBar.style.top = `${y}px`;
+        progressBar.style.left = `${first.x}px`;
+        progressBar.style.width = `${Math.max(0, last.x - first.x)}px`;
+        progressBar.style.height = `${trackH}px`;
+      } else {
+        const trackW = progressBar.offsetWidth || 8;
+        const x = first.x - trackW / 2;
+        progressBar.style.left = `${x}px`;
+        progressBar.style.top = `${first.y}px`;
+        progressBar.style.height = `${Math.max(0, last.y - first.y)}px`;
+        progressBar.style.width = `${trackW}px`;
+      }
+    }
+
+    function fillToCurrent() {
+      if (!isProgress || !bar) return;
+      if (!centers.length) measureCenters();
+      const first  = centers[0] || { x: 0, y: 0 };
+      const target = centers[currentSection - 1] || first;
+      if (orientation === "horizontal") {
+        bar.style.transition = `width ${loopSpeed}ms ease-in-out`;
+        bar.style.width  = (currentSection === 1) ? "0px" : `${Math.max(0, target.x - first.x)}px`;
+        bar.style.height = "100%";
+      } else {
+        bar.style.transition = `height ${loopSpeed}ms ease-in-out`;
+        bar.style.height = (currentSection === 1) ? "0px" : `${Math.max(0, target.y - first.y)}px`;
+        bar.style.width  = "100%";
+      }
+      if (currentDisplay) currentDisplay.textContent = currentSection;
+    }
+
+    function updateProgressStepState() {
+      if (!isProgress || !progressIndicatorWrap) return;
+      progressIndicatorWrap.querySelectorAll(".step").forEach((s, i) => {
+        s.classList.remove("active", "completed");
+        if (i + 1 < currentSection) s.classList.add("completed");
+        if (i + 1 === currentSection) s.classList.add("active");
+      });
+    }
+
+    // ----- basic-indicator -----
+    function buildBasicIndicator() {
+      if (!basicIndicatorWrap) return;
+      basicIndicatorWrap.innerHTML = "";
+      sections.forEach((sec, i) => {
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        basicIndicatorWrap.appendChild(dot);
+        dot.addEventListener("click", () => goToSection(i + 1));
+      });
+    }
+    function updateBasicIndicatorState() {
+      if (!basicIndicatorWrap) return;
+      const uiDots = basicIndicatorWrap.querySelectorAll(".dot");
+      uiDots.forEach((dot, i) => {
+        dot.classList.remove("active");
+        if (i === currentSection - 1) {
+          dot.classList.add("active");
+        }
+      });
+    }
+
+    // ----- pill-indicator -----
+    function buildPillIndicator() {
+      if (!pillIndicatorWrap) return;
+      pillIndicatorWrap.innerHTML = "";
+      sections.forEach((sec, i) => {
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        pillIndicatorWrap.appendChild(dot);
+        dot.addEventListener("click", () => goToSection(i + 1));
+      });
+    }
+    function updatePillIndicatorState() {
+      if (!pillIndicatorWrap) return;
+      const uiDots = pillIndicatorWrap.querySelectorAll(".dot");
+      uiDots.forEach((dot, i) => {
+        dot.classList.remove("active");
+        if (i === currentSection - 1) {
+          dot.classList.add("active");
+        }
+      });
+    }
+
+    // ----- window-indicator -----
+    function buildWindowIndicator() {
+      if (!windowIndicatorWrap) return;
+      windowIndicatorWrap.innerHTML = "";
+      sections.forEach((sec, i) => {
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        dot.dataset.index = i;
+        windowIndicatorWrap.appendChild(dot);
+        dot.addEventListener("click", () => goToSection(i + 1));
+      });
+    }
+
+    function updateWindowIndicatorWidth() {
+      if (!windowIndicatorWrap) return;
+
+      const visibleCount = getWindowVisibleCount();
+      const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const baseDot = 0.9 * rootFontSize;
+      const gap = parseFloat(getComputedStyle(windowIndicatorWrap).gap || 0);
+      const total = (baseDot * visibleCount) + (gap * (visibleCount - 1));
+      windowIndicatorWrap.style.maxWidth = total + "px";
+    }
+
+    function updateWindowIndicatorState() {
+      if (!windowIndicatorWrap) return;
+      const dots = [...windowIndicatorWrap.querySelectorAll(".dot")];
+      const activeIndex = currentSection - 1;
+
+      dots.forEach((dot, i) => {
+        dot.className = "dot";
+        const distance = Math.abs(i - activeIndex);
+
+        if (i === activeIndex) dot.classList.add("active");
+        else if (distance === 1) dot.classList.add("near");
+        else if (distance === 2) dot.classList.add("far1");
+        else if (distance === 3) dot.classList.add("far2");
+        else dot.classList.add("far-away");
+      });
+
+      const wrapWidth = windowIndicatorWrap.offsetWidth;
+      const activeDot = dots[activeIndex];
+      if (!activeDot) return;
+
+      const activeCenter = activeDot.offsetLeft + activeDot.offsetWidth / 2;
+      let offset = activeCenter - wrapWidth / 2;
+
+      const fullWidth = windowIndicatorWrap.scrollWidth;
+      const maxScroll = fullWidth - wrapWidth;
+      if (offset < 0) offset = 0;
+      if (offset > maxScroll) offset = maxScroll;
+
+      dots.forEach(dot => {
+        dot.style.transform = `translateX(${-offset}px)`;
+        dot.style.transition = "all 0.3s ease-in-out";
+      });
+    }
+
+    // ----- Unified indicator update -----
+    function updateIndicators() {
+      updateProgressStepState();
+      updateBasicIndicatorState();
+      updatePillIndicatorState();
+      updateWindowIndicatorState();
+    }
+
+    // ----- Navigation -----
+    function applyTranslate(noAnim = false) {
+      if (!sections.length) return;
+      const sectionWidth = sections[0].getBoundingClientRect().width;
+      const offset = -(visualIndex * sectionWidth);
+      track.style.transition = noAnim ? "none" : `transform ${loopSpeed}ms ease-in-out`;
+      track.style.transform  = `translateX(${offset}px)`;
+    }
+
+    function goToSection(n) {
+      if (isAnimating) return;
+      isAnimating = true;
+      currentSection = Math.min(Math.max(n, 1), totalSections);
+      visualIndex = currentSection;
+      updateIndicators();
+      fillToCurrent();
+      applyTranslate(false);
+      setTimeout(() => { isAnimating = false; }, loopSpeed);
+    }
+
+    function next() {
+      if (isAnimating) return;
+      isAnimating = true;
+      visualIndex += 1;
+      applyTranslate(false);
+      currentSection = (currentSection === totalSections) ? 1 : (currentSection + 1);
+      updateIndicators();
+      fillToCurrent();
+      setTimeout(() => {
+        if (visualIndex === totalSections + 1) {
+          visualIndex = 1;
+          applyTranslate(true);
+        }
+        isAnimating = false;
+      }, loopSpeed + 20);
+    }
+
+    function prev() {
+      if (isAnimating) return;
+      isAnimating = true;
+      visualIndex -= 1;
+      applyTranslate(false);
+      currentSection = (currentSection === 1) ? totalSections : (currentSection - 1);
+      updateIndicators();
+      fillToCurrent();
+      setTimeout(() => {
+        if (visualIndex === 0) {
+          visualIndex = totalSections;
+          applyTranslate(true);
+        }
+        isAnimating = false;
+      }, loopSpeed + 20);
+    }
+
+    // ----- Rebuild -----
+    function rebuild() {
+      resolveBreakpoint();
+      ensureTrack();
+      clearGenerated();
+      readSources();
+      buildSections();
+      buildClones();
+      buildProgressSteps();
+      buildBasicIndicator();
+      buildPillIndicator();
+      buildWindowIndicator();
+      currentSection = 1;
+      visualIndex = 1;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          measureCenters();
+          updateIndicators();
+          fillToCurrent();
+          applyTranslate(true);
+          updateWindowIndicatorWidth();
+        });
+      });
+    }
+
+    // Init
+    initLoopSpeed();
+    rebuild();
+
+    // Resize / nav events
+    window.addEventListener("resize", rebuild);
+    window.addEventListener("orientationchange", rebuild);
+    prevBtn?.addEventListener("click", prev);
+    nextBtn?.addEventListener("click", next);
+
+    // Swipe
+    let sx = 0, sy = 0, ex = 0, ey = 0;
+    document.addEventListener("touchstart", e => {
+      sx = e.changedTouches[0].screenX; sy = e.changedTouches[0].screenY;
+    }, { passive: true });
+    document.addEventListener("touchend", e => {
+      ex = e.changedTouches[0].screenX; ey = e.changedTouches[0].screenY;
+      const dx = ex - sx, dy = ey - sy;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx < -2) next();
+        if (dx >  2) prev();
+      } else {
+        if (dy < -2) next();
+        if (dy >  2) prev();
+      }
+    }, { passive: true });
+
+    // Helpers
+    window.setLoopSpeed = (ms) => { loopSpeed = +ms || loopSpeed; rebuild(); };
+    window.setProgress  = goToSection;
+  });
+});
