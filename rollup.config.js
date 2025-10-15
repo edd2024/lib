@@ -1,10 +1,20 @@
 import postcss from 'rollup-plugin-postcss';
-import postcssImport from 'postcss-import';
 import autoprefixer from 'autoprefixer';
 import cssnano from 'cssnano';
 
 export default [
-  // ... JS config unchanged
+  {
+    input: 'src/js/modules.js',
+    output: {
+      file: 'dist/lib.min.js',
+      format: 'iife',
+      name: 'LibBundle',
+      sourcemap: false
+    },
+    plugins: [
+      // resolve(), commonjs(), terser() ...
+    ]
+  },
   {
     input: 'src/css/modules.css',
     output: { file: '_noop.js', format: 'es' },
@@ -12,11 +22,7 @@ export default [
       postcss({
         extract: 'dist/lib.min.css',
         minimize: true,
-        plugins: [
-          postcssImport(),   // resolves and inlines @import files
-          autoprefixer(),
-          cssnano()
-        ]
+        plugins: [autoprefixer(), cssnano()]
       })
     ]
   }
