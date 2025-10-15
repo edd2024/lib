@@ -1,16 +1,22 @@
 {
   "name": "lib",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "prebuild": "node scripts/build-modules.js",
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "build:clean": "rimraf dist && npm run build"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
     "autoprefixer": "^10.4.21",
     "cssnano": "^5.1.15",
-    "rollup": "^3.0.0",
+    "postcss": "^8.4.47",
+    "rimraf": "^5.0.10",
+    "rollup": "^3.29.4",
     "rollup-plugin-postcss": "^4.0.2"
   }
 }

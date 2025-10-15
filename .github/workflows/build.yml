@@ -2,7 +2,14 @@ name: Build Library
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "rollup.config.js"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build.yml"
 
 permissions:
   contents: write
@@ -20,47 +27,55 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
+          cache: "npm"
 
       - name: Install dependencies
-        run: |
-          echo "Installing dependencies..."
-          npm ci || { echo "❌ npm install failed"; exit 1; }
+        run: npm ci
 
       - name: Debug workspace
         run: |
           echo "========= PROJECT STRUCTURE ========="
           pwd
-          ls -R
+          ls -la
+          echo
+          echo "src tree:"
+          ls -R src || true
+          echo "scripts tree:"
+          ls -R scripts || true
           echo "====================================="
 
-      - name: Run Rollup build (verbose)
-        run: |
-          echo "========= STARTING ROLLUP ========="
-          npm run build --if-present --verbose || {
-            echo "❌ Rollup failed! Printing dist and logs...";
-            echo "--- dist ---"; ls -R dist || true;
-            echo "--- src ---"; ls -R src || true;
-            echo "--- scripts ---"; ls -R scripts || true;
-            echo "--- rollup.config.js ---"; cat rollup.config.js || true;
-            exit 1;
-          }
-          echo "========= ROLLUP COMPLETED ========="
+      # Runs your "prebuild" automatically because we call "npm run build"
+      - name: Build with Rollup
+        run: npm run build
+        env:
+          NODE_ENV: production
 
-      - name: Verify dist output
+      - name: Verify required outputs exist
         run: |
-          if [ -f dist/lib.min.js ] && [ -f dist/lib.min.css ]; then
-            echo "✅ dist verified"
-          else
-            echo "❌ dist missing output files"
+          missing=0
+          for f in dist/lib.min.css dist/lib.min.js; do
+            if [ ! -f "$f" ]; then
+              echo "❌ Missing $f"
+              missing=1
+            else
+              echo "✅ Found $f"
+            fi
+          done
+          if [ $missing -ne 0 ]; then
+            echo "--- dist listing ---"
+            ls -R dist || true
             exit 1
           fi
 
-      - name: Commit and push dist files
+      - name: Commit and push dist files (if changed)
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f dist/lib.min.js dist/lib.min.css
-          git commit -m "chore(build): auto-update dist [skip ci]" || echo "No changes to commit"
-          git push origin HEAD:main || echo "No changes to push"
- 
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f dist
+          if git diff --cached --quiet; then
+            echo "No changes in dist to commit."
+          else
+            git commit -m "chore(build): auto-update dist [skip ci]"
+            git push origin HEAD:main
+          fi
