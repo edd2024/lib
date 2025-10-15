@@ -1,12 +1,11 @@
-import resolve from '@rollup/plugin-node-resolve';
-import commonjs from '@rollup/plugin-commonjs';
-import terser from '@rollup/plugin-terser';
 import postcss from 'rollup-plugin-postcss';
-import cssnano from 'cssnano';
 import autoprefixer from 'autoprefixer';
+import cssnano from 'cssnano';
+
+// ...
 
 export default [
-  // JS: bundle the auto-generated modules.js
+  // JS config (unchanged) …
   {
     input: 'src/js/modules.js',
     output: {
@@ -16,19 +15,18 @@ export default [
       sourcemap: false
     },
     plugins: [
-      resolve(),
-      commonjs(),
-      terser()
+      // resolve(), commonjs(), terser() etc.
     ]
   },
 
-  // CSS: bundle the auto-generated modules.css
+  // CSS: write a throwaway JS file OUTSIDE dist so no nested folder appears
   {
     input: 'src/css/modules.css',
-    output: { file: 'dist/_noop.js', format: 'es' },
+    // Write the placeholder JS to a temp path at project root (not under dist)
+    output: { file: '_noop.js', format: 'es' },
     plugins: [
       postcss({
-        extract: 'dist/lib.min.css',
+        extract: 'dist/lib.min.css',   // final CSS path
         minimize: true,
         plugins: [autoprefixer(), cssnano()]
       })
